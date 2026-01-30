@@ -1,51 +1,84 @@
 # Face Verification Project (Siamese Network)
 
 ## What is this project?
-Hi! This is a project I made to teach a computer how to recognize faces. It is called a **Siamese Network**. Basically, it works like the FaceID unlock on a phone. The goal is to give the computer two pictures and have it guess: "Is this the same person?" or "Are these different people?"
+Hi! This is a project I built to create a custom Face Verification system. Think of it like the FaceID on your phone. It uses a special type of AI called a **Siamese Network** to look at two faces and decide if they are the same person or not.
 
-I wrote this code in a Python Jupyter Notebook.
+I didn't just want it to recognize *a* face; I wanted it to verify *my* face specifically.
 
-## How does it actually work?
-To make this work, I used a special method. Instead of just showing the computer one face, I show it three things at once:
-1.  **Anchor:** A photo of me.
-2.  **Positive:** Another photo of me (so it matches the Anchor).
-3.  **Negative:** A photo of a random stranger.
+## How does a "Siamese Network" work?
+Most AI just looks at one picture and says "That's a cat." But a Siamese Network is like a "Twin" network.
+1. It takes two images at the same time.
+2. It runs both images through the exact same "brain" (embedding layer) to turn the pictures into a list of numbers.
+3. Then, it compares those numbers.
+   * If the numbers are close, the faces are the **same**.
+   * If the numbers are far apart, the faces are **different**.
 
-The computer looks at these and learns that the **Anchor** and **Positive** should be close friends (similar), but the **Anchor** and **Negative** should be far apart (different).
+To teach it, I used three types of images:
+* **Anchor:** A reference photo of me.
+* **Positive:** Another photo of me (matches the Anchor).
+* **Negative:** A photo of a stranger (doesn't match).
 
-## The Tools I Used
-To build this, I had to install some Python tools:
-* **TensorFlow:** This is the main brain for learning.
-* **OpenCV:** This helps the computer see images through the webcam.
-* **Matplotlib:** This acts like a graph paper to draw and show the pictures.
-* **NumPy:** This handles all the math and number lists.
+## Tools I Used
+I used Python and some specific libraries to make this work:
+* **TensorFlow/Keras:** This is the main library for building the deep learning model.
+* **OpenCV:** I used this to access my webcam and grab images in real-time.
+* **Matplotlib:** This is just to help me draw graphs and see the images while I was coding.
+* **NumPy:** This handles all the math and number crunching behind the scenes.
 
-## Step-by-Step: What I Did in the Code
+## Project Structure
+To keep things organized, the code creates these folders automatically:
+* `data/anchor`: Stores the main reference photos of me.
+* `data/positive`: Stores other photos of me to train the model.
+* `data/negative`: Stores photos of random strangers.
+* `training_checkpoints`: Saves the model progress so I don't lose it if my computer crashes.
+* `application_data`: Stores images used during the final real-time test.
 
-### 1. Setting up the folders
-First, I wrote code to make three folders on the computer: `data/positive`, `data/negative`, and `data/anchor`. This keeps everything organized so the photos don't get mixed up.
+## Step-by-Step: What the Code Does
 
-### 2. Getting the pictures
-* **The Strangers (Negatives):** I can't take photos of thousands of strangers myself, so I used a famous dataset called "Labelled Faces in the Wild" (LFW). I unzip this file to get the negative images.
-* **My Photos (Positives & Anchors):** I wrote a script to use my webcam.
-    * If I press the **'a'** key, it takes an Anchor photo.
-    * If I press the **'p'** key, it takes a Positive photo.
+### 1. Getting the Data
+First, I had to get the pictures.
+* **For Strangers (Negatives):** I downloaded the "Labelled Faces in the Wild" (LFW) dataset. This gave me thousands of random faces to use as "negative" examples.
+* **For Me (Positives/Anchors):** I wrote a script using OpenCV to turn on my webcam.
+    * I press **'a'** to take an Anchor photo.
+    * I press **'p'** to take a Positive photo.
+    * I also did some data augmentation (creating modified copies of my images) to make the dataset bigger and the model smarter.
 
-### 3. Fixing the images (Preprocessing)
-Computers like things to be neat. So, I made a function called `preprocess`. It takes the photo, shrinks it down to a square (100x100 pixels), and changes the colors to numbers between 0 and 1. This makes it easier for the model to read.
+### 2. Preprocessing (Cleaning up)
+The computer can't read a raw photo easily. So, I wrote a `preprocess` function that:
+1.  Loads the image file.
+2.  Resizes it to **100x100 pixels**.
+3.  Scales the colors down to be between 0 and 1 (instead of 0 to 255). This helps the AI learn faster.
 
-### 4. Building the "Brain" (The Model)
-This is the cool part. I built a deep learning model.
-* **The Embedding Layer:** This takes the photo and crushes it down into a list of numbers (features). It uses things called "Conv2D" and "MaxPooling" to find shapes and lines in the face.
-* **The Distance Layer:** I made a custom layer called `L1Dist`. It basically subtracts the numbers from the two pictures to see how different they are.
-* **The Classifier:** Finally, there is a dense layer with a "sigmoid" activation. This just spits out a score: 1 means it's a match, and 0 means it's not.
+### 3. Building the Model
+I built the network using three main parts:
+* **Embedding Layer:** This is a Convolutional Neural Network (CNN). It scans the face for shapes, eyes, and noses and turns them into a "feature vector" (a list of numbers).
+* **Distance Layer:** This is a custom layer I wrote called `L1Dist`. It basically subtracts the numbers from the two images to measure the distance between them.
+* **Classifier:** The final layer decides the result. It outputs `1` if the faces match and `0` if they don't.
 
-## How to Run It
-Since I don't have the dataset downloaded yet, I haven't run the training part. But if you want to use it:
-1.  Make sure you have the libraries installed (`pip install tensorflow opencv-python matplotlib`).
-2.  Download the **LFW dataset** and put it in the folder.
-3.  Run the cells to open your webcam and collect your own photos.
-4.  Run the model cells to start the learning process.
+### 4. Training
+I set up a custom training loop using `BinaryCrossentropy` (a fancy way of calculating error) and the `Adam` optimizer.
+* I feed the model batches of data (Anchor + Positive vs. Anchor + Negative).
+* It calculates the loss (mistakes) and updates the weights using `GradientTape`.
+* I also save checkpoints during training so I can resume later.
 
-## Final Note
-I am using a GPU setup in the code to make it run faster because training on just a regular CPU takes forever!.
+### 5. Evaluation
+To check if it was working, I used metrics like **Precision** (how accurate it is) and **Recall** (how many correct matches it found). I plotted these on a graph to watch the model get smarter over time.
+
+## Real-Time Test
+This is the fun part! After training, I wrote a `verify` function.
+1.  I open the webcam again.
+2.  A generic "verification" image is saved in the background.
+3.  When I press **'v'**, the model compares my live webcam face against 50 "input" images of me.
+4.  If enough of them match (based on a detection threshold), it says **Verified!**
+
+## How to Run This
+If you want to try this code:
+1.  Install the requirements: `pip install tensorflow opencv-python matplotlib numpy`.
+2.  Download the **LFW dataset** (for the negative images) and extract it.
+3.  Run the notebook cells in order.
+4.  Use the webcam collection cell to grab your own face data (press 'a' for anchor, 'p' for positive).
+5.  Train the model (this might take a while if you don't have a GPU!).
+6.  Run the final section to test it with your webcam in real-time.
+
+---
+*Note: I set up the code to limit GPU memory usage at the start so it doesn't crash my system.*
